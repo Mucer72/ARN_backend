@@ -12,7 +12,7 @@ describe('AuthService', () => {
   let roleRepository: jest.Mocked<RoleRepository>;
   let refreshTokenRepository: jest.Mocked<RefreshTokenRepository>;
   let jwtService: jest.Mocked<JwtService>;
-  const originalMaxDeviceSessions = process.env.MAX_DEVICE_SESSIONS;
+  const originalMaxDevices = process.env.MAX_DEVICES;
 
   beforeEach(async () => {
     userRepository = {
@@ -53,18 +53,18 @@ describe('AuthService', () => {
     }).compile();
 
     service = module.get<AuthService>(AuthService);
-    process.env.MAX_DEVICE_SESSIONS = '2';
+    process.env.MAX_DEVICES = '2';
   });
 
   afterEach(() => {
     jest.restoreAllMocks();
 
-    if (originalMaxDeviceSessions === undefined) {
-      delete process.env.MAX_DEVICE_SESSIONS;
+    if (originalMaxDevices === undefined) {
+      delete process.env.MAX_DEVICES;
       return;
     }
 
-    process.env.MAX_DEVICE_SESSIONS = originalMaxDeviceSessions;
+    process.env.MAX_DEVICES = originalMaxDevices;
   });
 
   it('should be defined', () => {
@@ -130,5 +130,49 @@ describe('AuthService', () => {
       access_token: 'signed-access-token',
       refresh_token: expect.any(String),
     });
+  });
+
+  it('uses the default device limit when MAX_DEVICES is not set', async () => {
+    delete process.env.MAX_DEVICES;
+
+    const passwordHash = await bcrypt.hash('password123', 10);
+
+    userRepository.findByEmail.mockResolvedValue({
+      id: 'user-1',
+      email: 'penguin@example.com',
+      passwordHash,
+      roleId: 'role-1',
+      role: {
+        id: 'role-1',
+        name: 'user',
+      },
+    } as never);
+    roleRepository.getRolePermissionNames.mockResolvedValue([
+      'users.read',
+    ] as never);
+    refreshTokenRepository.revokeExpiredByUser.mockResolvedValue({
+      count: 0,
+    } as never);
+    refreshTokenRepository.findActiveByUserId.mockResolvedValue([
+      {
+        id: 'oldest-token',
+        tokenHash: 'hash-1',
+        expiresAt: new Date(Date.now() + 60_000),
+        createdAt: new Date(Date.now() - 180_000),
+      },
+      {
+        id: 'middle-token',
+        tokenHash: 'hash-2',
+        expiresAt: new Date(Date.now() + 60_000),
+        createdAt: new Date(Date.now() - 120_000),
+      },
+    ] as never);
+    refreshTokenRepository.save.mockResolvedValue({} as never);
+    jwtService.sign.mockReturnValue('signed-access-token');
+
+    await service.login('penguin@example.com', 'password123');
+
+    expect(refreshTokenRepository.revokeMany).not.toHaveBeenCalled();
+    expect(refreshTokenRepository.save).toHaveBeenCalledTimes(1);
   });
 });

@@ -34,6 +34,8 @@ export class AuthService {
     const isMatch = await bcrypt.compare(password, user.passwordHash);
     if (!isMatch) throw new UnauthorizedException('Invalid credentials');
 
+    await this.enforceDeviceLimit(user.id);
+
     const permissions = await this.roleRepository.getRolePermissionNames(
       user.roleId,
     );
@@ -55,7 +57,7 @@ export class AuthService {
     await this.refreshTokenRepository.save({
       userId: user.id,
       tokenHash: refreshTokenHash,
-      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      expiresAt: this.getRefreshTokenExpiry(),
     });
 
     return {
@@ -80,7 +82,7 @@ export class AuthService {
         await this.refreshTokenRepository.save({
           userId,
           tokenHash: newHash,
-          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+          expiresAt: this.getRefreshTokenExpiry(),
         });
 
         const newAccessToken = this.jwtService.sign(
@@ -106,10 +108,41 @@ export class AuthService {
 
       if (isMatch) {
         await this.refreshTokenRepository.revoke(token.id);
-        return "Logged out successfully";
+        return 'Logged out successfully';
       }
     }
 
     throw new UnauthorizedException('Invalid refresh token');
   }
-}
+
+  private async enforceDeviceLimit(userId: string) {
+    await this.refreshTokenRepository.revokeExpiredByUser(userId);
+
+    const activeTokens = await this.refreshTokenRepository.findActiveByUserId(
+      userId,
+    );
+    const overflowCount = activeTokens.length - this.getMaxDevices() + 1;
+    console.log(`max devices: ${this.getMaxDevices()}`);
+    console.log(`Active sessions: ${activeTokens.length}, Overflow: ${overflowCount}`);
+    if (overflowCount <= 0) {
+      return;
+    }
+
+    // Revoke the oldest active sessions first to make room for this login.
+    await this.refreshTokenRepository.revokeMany(
+      activeTokens.slice(0, overflowCount).map((token) => token.id),
+    );
+  }
+
+  private getMaxDevices() {
+    return Number.parseInt(
+      process.env.MAX_DEVICES!
+    );
+  }
+
+  private getRefreshTokenExpiry() {
+    return new Date(
+      Date.now() + (Number.parseInt(process.env.REFRESH_TOKEN_EXPIRATION!))  
+      * 24 * 60 * 60 * 1000);
+  }
+} 
