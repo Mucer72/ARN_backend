@@ -22,9 +22,10 @@ Tech:
 
 - Login: DONE
 - Logout: DONE (no access token revoke yet)
-- JWT Guard: IN PROGRESS
-- Role Guard: TODO
-- multi-device session control: TODO
+- JWT Guard: DONE
+- Role Guard: DONE
+- Multi-device session control: DONE
+- API Gateway: In progress
 
 # Coding Rules
 
