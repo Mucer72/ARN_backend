@@ -22,11 +22,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
-      - name: Debug IMAGE
-        run: |
-          echo "USERNAME=${{ secrets.DOCKER_USERNAME }}"
-          echo "SERVICE=${{ matrix.service }}"
       
       - name: Set IMAGE variable
         run: echo "IMAGE=${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }}" >> $GITHUB_ENV
