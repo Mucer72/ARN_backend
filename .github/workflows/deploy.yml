@@ -31,15 +31,17 @@ jobs:
       - name: Login Docker Hub
         run: echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin
 
-      - name: Build image
-        run: |
-          docker build -t $IMAGE_NAME:latest ./${{ matrix.service }}
-          docker tag $IMAGE_NAME:latest $IMAGE_NAME:${{ github.sha }}
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-      - name: Push image
+      - name: Build and push
         run: |
-          docker push $IMAGE_NAME:latest
-          docker push $IMAGE_NAME:${{ github.sha }}
+          docker buildx build \
+          --platform linux/amd64 \
+          -t $IMAGE:latest \
+          -f ./${{ matrix.service }}/Dockerfile \
+          . \
+          --push
 
   deploy:
     runs-on: ubuntu-latest
