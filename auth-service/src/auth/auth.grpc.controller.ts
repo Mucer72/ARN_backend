@@ -19,6 +19,11 @@ import { Timestamp } from './generated/google/protobuf/timestamp';
 export class AuthGrpcController {
   constructor(private authService: AuthService) {}
 
+  @GrpcMethod('AuthService', 'Health')
+  async health() {
+    return { status: 'healthy' };
+  }
+
   @GrpcMethod('AuthService', 'Login')
   async login(data: LoginRequest): Promise<TokenPair> {
     const tokens = await this.authService.login(data.identifier, data.password);
