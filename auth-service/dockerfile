@@ -3,42 +3,27 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# 1. Copy package
 COPY auth-service/package*.json ./
-RUN npm install
+RUN npm ci
 
-# 2. Copy source + prisma
-COPY auth-service/. .
+COPY auth-service ./
+COPY proto-contracts ./proto-contracts
 COPY auth-service/prisma ./prisma
 
-# 2.1 Copy proto (shared)
-COPY proto-contracts ./proto-contracts
-
-# 3. Generate Prisma client
-RUN npx prisma generate
-
-# 4. Build
 RUN npm run build
 
-# ===== RUN =====
+# check build output (debug cực quan trọng)
+RUN ls -la dist
+
+RUN npm prune --omit=dev
+
+
+# ===== RUNTIME =====
 FROM node:20-alpine
 
 WORKDIR /app
 
-ENV NODE_ENV=production
-ENV TZ=Asia/Ho_Chi_Minh
-
-# 5. Install production deps
-COPY auth-service/package*.json ./
-RUN npm install --omit=dev
-
-# 6. Copy build + prisma artifacts
 COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
-COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
-COPY --from=builder /app/prisma ./prisma
-COPY --from=builder /app/proto-contracts ./proto-contracts
+COPY --from=builder /app/node_modules ./node_modules
 
-EXPOSE 3000 50051
-
-CMD ["node", "dist/src/main.js"]
+CMD ["node", "dist/main.js"]

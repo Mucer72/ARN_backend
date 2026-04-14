@@ -3,35 +3,24 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# 1. Copy package.json của api-gateway
 COPY api-gateway/package*.json ./
-RUN npm install
+RUN npm ci
 
-# 2. Copy source code
-COPY api-gateway/. .
-
-# 3. Copy proto (shared)
+COPY api-gateway ./
 COPY proto-contracts ./proto-contracts
 
-# 4. Build
 RUN npm run build
+RUN npm prune --omit=dev
 
-# ===== RUN =====
+# ===== RUNTIME =====
 FROM node:20-alpine
 
 WORKDIR /app
 
 ENV NODE_ENV=production
-ENV TZ=Asia/Ho_Chi_Minh
 
-# 5. Install production deps
-COPY api-gateway/package*.json ./
-RUN npm install --omit=dev
-
-# 6. Copy build output + proto
 COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/proto-contracts ./proto-contracts
-
-EXPOSE 3000 50051
 
 CMD ["node", "dist/main.js"]

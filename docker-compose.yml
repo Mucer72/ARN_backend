@@ -1,52 +1,48 @@
 version: "3.9"
 
 services:
-  api-gateway:
-    build:
-      context: .
-      dockerfile: api-gateway/dockerfile
-    container_name: api-gateway
-    restart: unless-stopped
-    ports:
-      - "3000:3000"
-    env_file:
-      - .env
-    depends_on:
-      - auth-service
-    networks:
-      - backend
+  auth-db:
+    image: postgres:15-alpine
+    container_name: auth-db
+    restart: always
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: 0248qazwsx
+      POSTGRES_DB: auth_db
+    volumes:
+      - auth-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   auth-service:
     build:
       context: .
       dockerfile: auth-service/dockerfile
     container_name: auth-service
-    restart: unless-stopped
+    depends_on:
+      auth-db:
+        condition: service_healthy
+    env_file:
+      - ./auth-service/.env
     ports:
       - "3001:3000"
-      - "50051:50051"
-    env_file:
-      - auth-service/.env
-    depends_on:
-      - auth-db
-    networks:
-      - backend
+    restart: always
 
-  auth-db:
-    image: postgres:15-alpine
-    container_name: auth-db
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: admin
-      POSTGRES_PASSWORD: db0248qazwsx
-      POSTGRES_DB: auth_db
-    volumes:
-      - auth_data:/var/lib/postgresql/data
-    networks:
-      - backend
+  api-gateway:
+    build:
+      context: .
+      dockerfile: api-gateway/dockerfile
+    container_name: api-gateway
+    depends_on:
+      - auth-service
+    env_file:
+      - .env
+    ports:
+      - "3000:3000"
+    restart: always
 
 volumes:
-  auth_data:
-
-networks:
-  backend:
+  auth-db-data:
