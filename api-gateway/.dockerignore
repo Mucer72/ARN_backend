@@ -1,34 +1,8 @@
-# dependencies
-node_modules
-**/node_modules
-
-# build
-dist
-**/dist
-.next
-.nuxt
-
-# env
-.env
-**/.env
-
-# git
+node_modules/
 .git
 .gitignore
-
-# logs
-*.log
-npm-debug.log
-yarn-error.log
-
-# cache
-.cache
-.tmp
-coverage
-
-# macOS
-.DS_Store
-
-# docker
 Dockerfile
-docker-compose*.yml
+docker-compose.yml
+*.log
+dist/
+.env*
