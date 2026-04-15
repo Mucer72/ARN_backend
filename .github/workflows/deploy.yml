@@ -35,9 +35,3 @@ jobs:
           -f api-gateway/dockerfile \
           . \
           --push
-
-      - name: Push auth-service
-        run: docker push ${{ secrets.DOCKER_USERNAME }}/auth-service:latest
-
-      - name: Push api-gateway
-        run: docker push ${{ secrets.DOCKER_USERNAME }}/api-gateway:latest
