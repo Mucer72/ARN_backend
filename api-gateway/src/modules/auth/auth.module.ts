@@ -3,7 +3,7 @@ import { ClientsModule, Transport } from '@nestjs/microservices';
 import { AuthClient } from '../../grpc/clients/auth.clients';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
-import { join } from 'path';
+import { JwtModule } from '@nestjs/jwt';
 
 @Module({
   imports: [
@@ -18,6 +18,9 @@ import { join } from 'path';
         },
       },
     ]),
+    JwtModule.register({
+      secret: process.env.SECRET_KEY,
+    }),
   ],
   controllers: [AuthController],
   providers: [AuthService, AuthClient],
